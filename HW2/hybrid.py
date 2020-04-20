@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import cv2
 
@@ -7,27 +8,27 @@ def hybrid(img1,img2,Filter):
     highPassed = img2/255 - filterDFT(img2, Filter(5, highPass=False)) # img - loss pass = highpass
     return highPassed + lowPassed
 
-def GaussianFilter(frequency, highPass=True):
+def GaussianFilter(cutoff_frequency, highPass=True):
     # filter size
-    size = 8 * frequency + 1
+    size = 8 * cutoff_frequency + 1
     if not size % 2:
         size = size + 1
     # lambda function for gaussian at i,j position
-    gaussian = lambda i,j: np.exp(-1.0 * ((i - size//2)**2 + (j - size//2)**2) / (2 * frequency**2))
+    gaussian = lambda i,j: np.exp(-1.0 * ((i - size//2)**2 + (j - size//2)**2) / (2 * cutoff_frequency**2))
     k = np.array([[1-gaussian(i,j) if highPass else gaussian(i,j) for j in range(size)] for i in range(size)])
     return k/np.sum(k)
 
-def idealFilter(frequency, highPass=True):
+def idealFilter(cutoff_frequency, highPass=True):
     # filter size
-    size = 8 * frequency + 1
+    size = 8 * cutoff_frequency + 1
     if not size % 2:
         size = size + 1
     # lambda function for gaussian at i,j position
     ideal = lambda i,j:((i - size//2)**2+(j - size//2)**2)**0.5
     if highPass:
-        return np.array([[0 if ideal(i,j) <= frequency else 1 for j in range(size)] for i in range(size)])
+        return np.array([[0 if ideal(i,j) <= cutoff_frequency else 1 for j in range(size)] for i in range(size)])
     else:
-        return np.array([[1 if ideal(i,j) <= frequency else 0 for j in range(size)] for i in range(size)])
+        return np.array([[1 if ideal(i,j) <= cutoff_frequency else 0 for j in range(size)] for i in range(size)])
 
 def filterDFT(img, filterH):
     k_h, k_w = filterH.shape[0],filterH.shape[1]
@@ -50,12 +51,19 @@ def filterDFT(img, filterH):
 
 
 if __name__ == "__main__":
-    root = "hw2_data/task1and2_hybrid_pyramid"
+    root = os.path.join('hw2_data','task1and2_hybrid_pyramid')
+    name1='1_bicycle.bmp'
+    name2='1_motorcycle.bmp'
     # load images
-    img1 = cv2.imread(root+"/3_cat.bmp")
-    img2 = cv2.imread(root+"/3_dog.bmp")
+    img1 = cv2.imread(os.path.join(root,name1))
+    img2 = cv2.imread(os.path.join(root,name2))
+
     resultGaussian = hybrid(img1,img2,GaussianFilter)*255
     resultideal = hybrid(img1,img2,idealFilter)
-    cv2.imwrite("Gaussian_result0.jpg",resultGaussian)
-    cv2.imwrite("ideal_result0.jpg",resultideal)
-    
+
+    cv2.imshow('gaussian',resultGaussian/255)
+    cv2.imshow('ideal',resultideal/255)
+    cv2.imwrite(os.path.join('result','task1',f'gaussian_{name1.split(".")[0]}_{name2.split(".")[0]}.jpg'),resultGaussian)
+    cv2.imwrite(os.path.join('result','task1',f'ideal_{name1.split(".")[0]}_{name2.split(".")[0]}.jpg'),resultideal)
+    cv2.waitKey(2000)
+    cv2.destroyAllWindows()

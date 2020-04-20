@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
@@ -62,25 +63,23 @@ def img_to_spectrum(img):
     if len(img.shape) == 3:
         result = np.zeros(img.shape)
         for color in range(3):
-            result[:, :, color] = np.fft.fft2(img[:, :, color])
+            result[:, :, color] = np.fft.fft2(img[:, :, color]).real
         return np.log(1+np.abs(np.fft.fftshift(result))) # normalizing result
     else: # gray
         return np.log(1+np.abs(np.fft.fftshift(np.fft.fft2(img)))) # normalizing result
 
 if __name__ == "__main__":
-    root = "hw2_data/task1and2_hybrid_pyramid/"
-    # img1 = cv2.imread(root+"5_fish.bmp")
-    img1 = cv2.imread("img.jpg")
+    root = os.path.join('hw2_data','task1and2_hybrid_pyramid')
+    img1 = cv2.imread(os.path.join(root,'4_einstein.bmp'))
     result = img1
-    for i in range(5):
+    for i in range(4):
         old_result = result
         result = filterDFT(result,GaussianFilter(2))
-        cv2.imwrite("gaussian_result{}.jpg".format(i),result)
+        cv2.imwrite(os.path.join('result','task2',f'gaussian_{i}.jpg'),result)
 
         gaussian_spectrum = img_to_spectrum(result)
-        # cv2.imwrite("gaussian_sp_result{}.jpg".format(i),gaussian_spectrum)
         plt.imshow(gaussian_spectrum)
-        plt.savefig("gaussian_sp_result{}.jpg".format(i))
+        plt.savefig(os.path.join('result','task2',f'gaussian_sp_{i}.jpg'))
 
         if i == 4:
             Laplacian = result
@@ -88,12 +87,13 @@ if __name__ == "__main__":
             result = subsampling(result)
             result2 = upsampling(result,old_result)
             Laplacian = old_result - result2
-        cv2.imwrite("Laplacian_result{}.jpg".format(i),Laplacian)
+        cv2.imwrite(os.path.join('result','task2',f'Laplacian_{i}.jpg'),Laplacian)
 
         Laplacian_spectrum = img_to_spectrum(Laplacian)
-        print(Laplacian_spectrum)
         plt.imshow(Laplacian_spectrum)
-        plt.savefig("Laplacian_sp_result{}.jpg".format(i))
+        plt.savefig(os.path.join('result','task2',f'Laplacian_sp_{i}.jpg'))
+        cv2.waitKey(3000)
+        cv2.destroyAllWindows()
 
         ## openCV result
         # A = cv2.imread("img.jpg")

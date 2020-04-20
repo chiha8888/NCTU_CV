@@ -1,3 +1,4 @@
+import os
 import matplotlib.pyplot as plt
 import numpy as np
 import cv2
@@ -22,18 +23,18 @@ def Align(target,x,t):
     return offset
 if __name__ == "__main__":
 
-    root = "hw2_data/task3_colorizing/"
+    root = os.path.join('hw2_data','task3_colorizing')
     name = 'tobolsk.jpg'
-    img=cv2.imread(root+name,0)
-    w,h=img.shape[:2]
-    img=img[int(w*0.01):int(w-w*0.01),int(h*0.01):int(h-h*0.01)] # remove the 
-    w,h=img.shape[:2]
+    img=cv2.imread(os.path.join(root,name),0)
+    w, h = img.shape[:2]
+    img = img[int(w * 0.01):int(w - w * 0.01), int(h * 0.01):int(h - h * 0.01)]  # remove the
+    w, h = img.shape[:2]
 
     # get RGB image
-    height=w//3
-    blue=img[0:height,:]
-    green=img[height:2*height,:]
-    red=img[2*height:3*height,:]
+    height = w // 3
+    blue = img[0:height, :]
+    green = img[height:2 * height, :]
+    red = img[2 * height:3 * height, :]
 
     # get the offset of x and y direction
     offect_g = Align(blue,green,10)
@@ -46,4 +47,4 @@ if __name__ == "__main__":
     # concat RGB and draw
     result = np.concatenate((red[:,:,None],green[:,:,None],blue[:,:,None]),axis=2)
     plt.imshow(result)
-    plt.savefig("result_{}.jpg".format(name))
+    plt.savefig(os.path.join('result','task3',f'{name.split(".")[0]}'))
