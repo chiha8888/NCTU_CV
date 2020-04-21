@@ -14,7 +14,6 @@ def GaussianFilter(frequency, highPass=False):
     k = np.array([[1-gaussian(i,j) if highPass else gaussian(i,j) for j in range(size)] for i in range(size)])
     return k/np.sum(k)
 
-
 def filterDFT(img, filterH):
     k_h, k_w = filterH.shape[0],filterH.shape[1]
     start_h,start_w = (img.shape[0] - k_h) // 2, (img.shape[1] - k_w) // 2
@@ -57,6 +56,7 @@ def upsampling(img,old_result):
         return np.pad(result,((padc,0),(padr,0),(0,0)),"constant")
     else: # gray
         return np.pad(result,((padc,0),(padr,0)),"constant")
+
 ## convert img to spectrum
 def img_to_spectrum(img):
     # if RGB
@@ -64,15 +64,25 @@ def img_to_spectrum(img):
         result = np.zeros(img.shape)
         for color in range(3):
             result[:, :, color] = np.fft.fft2(img[:, :, color]).real
-        return np.log(1+np.abs(np.fft.fftshift(result))) # normalizing result
+        return normalize(np.log(1+np.abs(np.fft.fftshift(result)))) # normalizing result
     else: # gray
-        return np.log(1+np.abs(np.fft.fftshift(np.fft.fft2(img)))) # normalizing result
+        return normalize(np.log(1+np.abs(np.fft.fftshift(np.fft.fft2(img))))) # normalizing result
+
+def normalize(img):
+    """
+    normalize img to 0~1
+    """
+    img_min = img.min()
+    img_max = img.max()
+    return (img - img_min) / (img_max - img_min)
 
 if __name__ == "__main__":
     root = os.path.join('hw2_data','task1and2_hybrid_pyramid')
-    img1 = cv2.imread(os.path.join(root,'4_einstein.bmp'))
+    name='4_einstein.bmp'
+    step=4
+    img1 = cv2.imread(os.path.join(root,name))
     result = img1
-    for i in range(4):
+    for i in range(step):
         old_result = result
         result = filterDFT(result,GaussianFilter(2))
         cv2.imwrite(os.path.join('result','task2',f'gaussian_{i}.jpg'),result)

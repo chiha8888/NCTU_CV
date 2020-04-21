@@ -1,69 +1,111 @@
 import os
+import math
 import numpy as np
 import cv2
+import matplotlib.pyplot as plt
+manager = plt.get_current_fig_manager()
+manager.window.showMaximized()
 
 
-def hybrid(img1,img2,Filter):
-    lowPassed = filterDFT(img1, Filter(5, highPass=False))
-    highPassed = img2/255 - filterDFT(img2, Filter(5, highPass=False)) # img - loss pass = highpass
-    return highPassed + lowPassed
+def hybrid(img1,img2,cutoff_frequency,Filter):
+    assert img1.shape==img2.shape,'shape not match'
+    h,w,c=img1.shape
+    lowPassed = convolution(img1, Filter(h,w,cutoff_frequency,lowPass=True))
+    highPassed = convolution(img2, Filter(h,w,cutoff_frequency, lowPass=False))
+    return highPassed+lowPassed,lowPassed,highPassed
 
-def GaussianFilter(cutoff_frequency, highPass=True):
-    # filter size
-    size = 8 * cutoff_frequency + 1
-    if not size % 2:
-        size = size + 1
-    # lambda function for gaussian at i,j position
-    gaussian = lambda i,j: np.exp(-1.0 * ((i - size//2)**2 + (j - size//2)**2) / (2 * cutoff_frequency**2))
-    k = np.array([[1-gaussian(i,j) if highPass else gaussian(i,j) for j in range(size)] for i in range(size)])
-    return k/np.sum(k)
-
-def idealFilter(cutoff_frequency, highPass=True):
-    # filter size
-    size = 8 * cutoff_frequency + 1
-    if not size % 2:
-        size = size + 1
-    # lambda function for gaussian at i,j position
-    ideal = lambda i,j:((i - size//2)**2+(j - size//2)**2)**0.5
-    if highPass:
-        return np.array([[0 if ideal(i,j) <= cutoff_frequency else 1 for j in range(size)] for i in range(size)])
+def idealFilter(h,w,cutoff_frequency,lowPass):
+    """
+    :return: (h,w) ndarray
+    """
+    x0,y0=w//2,h//2
+    if lowPass:
+        H=np.zeros((h,w))
+        for x in range(x0-cutoff_frequency, x0+cutoff_frequency):
+            # (x-x0)^2 + (y-y0)^2 = r^2
+            for y in range(int(y0-math.sqrt(cutoff_frequency**2-(x-x0)**2)),int(y0+math.sqrt(cutoff_frequency**2-(x-x0)**2))):
+                    H[y,x]=1
     else:
-        return np.array([[1 if ideal(i,j) <= cutoff_frequency else 0 for j in range(size)] for i in range(size)])
+        H=np.ones((h,w))
+        for x in range(x0-cutoff_frequency,x0+cutoff_frequency):
+            for y in range(int(y0-math.sqrt(cutoff_frequency**2-(x-x0)**2)),int(y0+math.sqrt(cutoff_frequency**2-(x-x0)**2))):
+                    H[y,x]=0
+    return H
 
-def filterDFT(img, filterH):
-    k_h, k_w = filterH.shape[0],filterH.shape[1]
-    start_h,start_w = (img.shape[0] - k_h) // 2, (img.shape[1] - k_w) // 2
-    pad_filter = np.zeros(img.shape[:2])
-    pad_filter[start_h : start_h + k_h, start_w : start_w + k_w] = filterH # pad the filter
+def GaussianFilter(h,w,cutoff_frequency, lowPass):
+    """
+    :return: (h,w) ndarray
+    """
+    x0,y0=w//2,h//2
+    if lowPass:
+        H=np.zeros((h,w))
+        for x in range(w):
+            for y in range(h):
+                H[y,x]=math.exp(-1*((x-x0)**2+(y-y0)**2)/(2*cutoff_frequency**2))
+    else:
+        H=np.ones((h,w))
+        for x in range(w):
+            for y in range(h):
+                H[y,x]-=math.exp(-1*((x-x0)**2+(y-y0)**2)/(2*cutoff_frequency**2))
+    return H
 
-    filt_fft = np.fft.fft2(pad_filter)
-    # RGB
-    if len(img.shape) == 3:
-        result = np.zeros(img.shape)
-        for color in range(3):
-            img_fft = np.fft.fft2(img[:, :, color])
-            result[:, :, color] = np.fft.fftshift(np.fft.ifft2(img_fft * filt_fft)).real # apply the filter
-        return result/255
-    else: # gray
-        img_fft = np.fft.fft2(img)
-        result_img = np.fft.ifft2(img_fft * filt_fft).real
-        return np.fft.fftshift(result_img)/255
+def convolution(image, H):
+    """
+    :param image: (H,W,C) ndarray
+    :param H: (H,W) filter ndarray
+    """
+    h,w,c=image.shape
+    image_sp = np.zeros((h,w,c))
+    result = np.zeros((h,w,c))
+    for channel in range(c):
+        image_ = image[:,:,channel] / 255
+        """
+        Multiply the input image by (-1)^x+y to center the transform.
+        """
+        for i in range(h):
+            for j in range(w):
+                image_[i,j]=((-1)**(i+j))*image_[i,j]
+        """
+        Compute ftt F for input image
+        """
+        F=(np.fft.fft2(image_))
+        image_sp[:,:,channel]=20*np.log(np.abs(F))
+        """
+        Multiply F by H, compute the inverse ftt of the result
+        """
+        result[:,:,channel]=np.absolute(np.fft.ifft2(F*H))
+    return result
 
+def normalize(img):
+    """
+    normalize img to 0~1
+    """
+    img_min = img.min()
+    img_max = img.max()
+    return (img - img_min) / (img_max - img_min)
 
 if __name__ == "__main__":
     root = os.path.join('hw2_data','task1and2_hybrid_pyramid')
-    name1='1_bicycle.bmp'
-    name2='1_motorcycle.bmp'
+    name1='6_makeup_after.jpg'
+    name2='6_makeup_before.jpg'
+    cutoff_frequencies=[6] # bigger value -> clearer lowPass & less highPass
     # load images
     img1 = cv2.imread(os.path.join(root,name1))
     img2 = cv2.imread(os.path.join(root,name2))
+    if name1=='6_makeup_after.jpg' and name2=='6_makeup_before.jpg':
+        img1=img1[:-1,:-1,:]
 
-    resultGaussian = hybrid(img1,img2,GaussianFilter)*255
-    resultideal = hybrid(img1,img2,idealFilter)
+    for cutoff_frequency in cutoff_frequencies:
+        for name,Filter in zip(['ideal','gaussian'],[idealFilter,GaussianFilter]):
+            result,lowPassed,highPassed = hybrid(img1,img2,cutoff_frequency,Filter)
 
-    cv2.imshow('gaussian',resultGaussian/255)
-    cv2.imshow('ideal',resultideal/255)
-    cv2.imwrite(os.path.join('result','task1',f'gaussian_{name1.split(".")[0]}_{name2.split(".")[0]}.jpg'),resultGaussian)
-    cv2.imwrite(os.path.join('result','task1',f'ideal_{name1.split(".")[0]}_{name2.split(".")[0]}.jpg'),resultideal)
-    cv2.waitKey(2000)
-    cv2.destroyAllWindows()
+            plt.subplot(231), plt.imshow(img1[:,:,::-1]), plt.xticks([]), plt.yticks([]), plt.title('image1')
+            plt.subplot(234), plt.imshow(img2[:, :, ::-1]), plt.xticks([]), plt.yticks([]), plt.title('image2')
+            plt.subplot(232), plt.imshow(normalize(lowPassed)[:,:,::-1]), plt.xticks([]), plt.yticks([]), plt.title('lowPass')
+            plt.subplot(235), plt.imshow(normalize(highPassed)[:,:,::-1]), plt.xticks([]), plt.yticks([]), plt.title('highPass')
+            plt.subplot(133), plt.imshow(normalize(result)[:,:,::-1]), plt.xticks([]), plt.yticks([]), plt.title(f'result (cutoff frequency={cutoff_frequency})')
+            plt.show()
+
+            cv2.imwrite(os.path.join('result', 'task1', name,
+                                     f'{name1.split(".")[0]}_{name2.split(".")[0]}_cutoff{cutoff_frequency}.jpg'),
+                        normalize(result) * 255)

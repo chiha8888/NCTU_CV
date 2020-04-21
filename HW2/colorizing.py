@@ -8,6 +8,7 @@ def ncc(g,f):
     g=g-g.mean(axis=0)
     f=f-f.mean(axis=0)
     return np.sum((g * f)/(np.linalg.norm(g)) * (np.linalg.norm(f)))
+
 def Align(target,x,t):
     mini = float("-inf")
     col=np.linspace(-t,t,2*t,dtype=int)
@@ -21,10 +22,11 @@ def Align(target,x,t):
                 mini = diff
                 offset = [i,j]
     return offset
+
 if __name__ == "__main__":
 
     root = os.path.join('hw2_data','task3_colorizing')
-    name = 'tobolsk.jpg'
+    name = 'nativity.jpg'
     img=cv2.imread(os.path.join(root,name),0)
     w, h = img.shape[:2]
     img = img[int(w * 0.01):int(w - w * 0.01), int(h * 0.01):int(h - h * 0.01)]  # remove the
