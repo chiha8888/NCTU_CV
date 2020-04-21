@@ -26,7 +26,7 @@ def Align(target,x,t):
 if __name__ == "__main__":
 
     root = os.path.join('hw2_data','task3_colorizing')
-    name = 'nativity.jpg'
+    name = 'workshop.tif'
     img=cv2.imread(os.path.join(root,name),0)
     w, h = img.shape[:2]
     img = img[int(w * 0.01):int(w - w * 0.01), int(h * 0.01):int(h - h * 0.01)]  # remove the
