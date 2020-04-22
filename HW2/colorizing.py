@@ -26,7 +26,7 @@ def Align(target,x,t):
 if __name__ == "__main__":
 
     root = os.path.join('hw2_data','task3_colorizing')
-    name = 'workshop.tif'
+    name = 'monastery.jpg'
     img=cv2.imread(os.path.join(root,name),0)
     w, h = img.shape[:2]
     img = img[int(w * 0.01):int(w - w * 0.01), int(h * 0.01):int(h - h * 0.01)]  # remove the
@@ -39,14 +39,17 @@ if __name__ == "__main__":
     red = img[2 * height:3 * height, :]
 
     # get the offset of x and y direction
-    offect_g = Align(blue,green,10)
+    offset_g = Align(blue,green,10)
     offset_r = Align(blue,red,10)
+    print(offset_g)
+    print(offset_r)
 
     # shift the green and red image
-    green=np.roll(green,offect_g,axis=(0,1))
+    green=np.roll(green,offset_g,axis=(0,1))
     red=np.roll(red,offset_r,axis=(0,1))
 
     # concat RGB and draw
     result = np.concatenate((red[:,:,None],green[:,:,None],blue[:,:,None]),axis=2)
     plt.imshow(result)
     plt.savefig(os.path.join('result','task3',f'{name.split(".")[0]}'))
+    plt.waitforbuttonpress(0)

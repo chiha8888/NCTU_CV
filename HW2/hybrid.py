@@ -86,9 +86,9 @@ def normalize(img):
 
 if __name__ == "__main__":
     root = os.path.join('hw2_data','task1and2_hybrid_pyramid')
-    name1='6_makeup_after.jpg'
-    name2='6_makeup_before.jpg'
-    cutoff_frequencies=[6] # bigger value -> clearer lowPass & less highPass
+    name1='3_cat.bmp'
+    name2='3_dog.bmp'
+    cutoff_frequencies=[5] # bigger value -> clearer lowPass & less highPass
     # load images
     img1 = cv2.imread(os.path.join(root,name1))
     img2 = cv2.imread(os.path.join(root,name2))
