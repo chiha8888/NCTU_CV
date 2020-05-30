@@ -3,13 +3,9 @@ import cv2
 import matplotlib.pyplot as plt
 
 
-def to_homogeneous(pts):
-    one = np.ones((pts.shape[0],1))
-    return np.hstack((pts,one))
-
 def norm_line(lines):
-    a = lines[:,0:1]
-    b = lines[:,1:2]
+    a = lines[0,:]
+    b = lines[1,:]
     length = np.sqrt(a**2 + b**2)
     return lines / length
 
@@ -31,17 +27,20 @@ def drawlines(img1, img2, lines, pts1, pts2):
     return img1, img2
 
 def draw_epilines(gray1, gray2, inlier1, inlier2, F, filename):
-    # (F.T @ to_homogeneous(inlier2).T).T
-    lines1_unnorm = to_homogeneous(inlier2) @ F
+    """
+    :param inlier1: (N,2) ndarray
+    :param inlier2: (N,2) ndarray
+    """
+    lines1_unnorm= F @ np.hstack((inlier2,np.ones((inlier2.shape[0],1)))).T
     lines1 = norm_line(lines1_unnorm)
-    img5, img6 = drawlines(gray1, gray2, lines1, inlier1.astype(np.int32), inlier2.astype(np.int32))
+    img1, img2 = drawlines(gray1, gray2, lines1.T, inlier1.astype(np.int), inlier2.astype(np.int))
 
-    lines2_unnorm = (F @ to_homogeneous(inlier1).T).T
+    lines2_unnorm = F.T @ np.hstack((inlier1,np.ones((inlier1.shape[0],1)))).T
     lines2 = norm_line(lines2_unnorm)
-    img3, img4 = drawlines(gray2, gray1, lines2, inlier2.astype(np.int32), inlier1.astype(np.int32))
+    img3, img4 = drawlines(gray2, gray1, lines2.T, inlier2.astype(np.int), inlier1.astype(np.int))
 
-    plt.subplot(221), plt.imshow(img5)
-    plt.subplot(222), plt.imshow(img6)
+    plt.subplot(221), plt.imshow(img1)
+    plt.subplot(222), plt.imshow(img2)
     plt.subplot(223), plt.imshow(img4)
     plt.subplot(224), plt.imshow(img3)
     plt.savefig(filename)

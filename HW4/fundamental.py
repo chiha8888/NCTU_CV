@@ -28,18 +28,13 @@ def compute_fundamental_matrix(x,x_):
     #Each row in the A is [x'*x, x'*y, x', y'*x, y'*y, y', x, y, 1]
     A = np.zeros((8,9))
     for i in range(8):
-
-        A[i] = [x[0, i] * x_[0, i],  x[0, i] * x_[1, i],  x[0, i],
-                x[1, i] * x_[0, i],  x[1, i] * x_[1, i],  x[1, i],
-                          x_[0, i],            x_[1, i],        1,
-                ]
-        #A[i]=[ x_[0, i]*x[0, i], x_[0, i]*x[1, i], x_[0, i], x_[1, i]*x[0, i], x_[1, i]*x[1, i], x_[1, i], x[0, i], x[1, i], 1 ]
+        A[i]=[ x_[0, i]*x[0, i], x_[0, i]*x[1, i], x_[0, i], x_[1, i]*x[0, i], x_[1, i]*x[1, i], x_[1, i], x[0, i], x[1, i], 1 ]
 
     # A@f=0
     U, S, V = np.linalg.svd(A)
     F = V[-1,:].reshape(3, 3)
 
-    # constrain F. Make rank 2 by zeroing out last singular value
+    # det(F)=0 constrain
     U, S, V = np.linalg.svd(F)
     S[-1] = 0
     F = U @ np.diag(S) @ V
@@ -56,8 +51,7 @@ def compute_fundamental_matrix_normalized(p1,p2):
 
     F = compute_fundamental_matrix(p1_normalized,p2_normalized)
 
-    # reverse preprocessing of coordinates
-    F = T1.T @ F @ T2
+    F = T2.T @ F @ T1
     return F / F[2, 2]
 
 def get_fundamental_matrix(keypoints1,keypoints2,threshold):
@@ -80,10 +74,10 @@ def get_fundamental_matrix(keypoints1,keypoints2,threshold):
         F=compute_fundamental_matrix_normalized(keypoints1[choose_idx,:],keypoints2[choose_idx,:])
 
         # select indices with accepted points, Sampson distance as error.
-        Fx1 = F @ keypoints1.T
-        Fx2 = F @ keypoints2.T
+        Fx1=(keypoints1@F).T
+        Fx2=(keypoints2@F).T
         denom = Fx1[0] ** 2 + Fx1[1] ** 2 + Fx2[0] ** 2 + Fx2[1] ** 2
-        errors = np.diag( keypoints1 @ F @ keypoints2.T ) ** 2 / denom
+        errors = np.diag(keypoints2 @ F @ keypoints1.T) ** 2 / denom
         inlier_idxs=np.where(errors<threshold)[0]
 
         cost = np.sum(errors[errors<threshold]) + (N-len(inlier_idxs))*threshold
@@ -91,5 +85,7 @@ def get_fundamental_matrix(keypoints1,keypoints2,threshold):
             best_cost=cost
             best_F=F
             best_inlier_idxs=inlier_idxs
+
+    best_F = best_F.T
 
     return best_F, best_inlier_idxs
