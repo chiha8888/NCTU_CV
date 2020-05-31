@@ -21,9 +21,10 @@ def compute_P_from_essential(E):
 
     return P2s
 
-def threeD_from_camera_matrix(K,P1,P2s,inlier1,inlier2):
+def threeD_from_camera_matrix(K1,K2,P1,P2s,inlier1,inlier2):
     """
-    :param K: Intrinsic matrix
+    :param K1: Intrinsic matrix form camera1
+    :param K2: Intrinsic matrix from camera2
     :param P1: Extrinsic matrix from camera1
     :param P2s: Extrinsic matrixs from camera2
     :param inlier1: (N,2) ndarray
@@ -34,8 +35,8 @@ def threeD_from_camera_matrix(K,P1,P2s,inlier1,inlier2):
     threeDs=[]
     for i in range(4):
         P2=P2s[i]
-        CM1=K@P1
-        CM2=K@P2
+        CM1=K1@P1
+        CM2=K2@P2
 
         threeD_points=[]
         for i in range(N):
@@ -50,3 +51,21 @@ def threeD_from_camera_matrix(K,P1,P2s,inlier1,inlier2):
         threeDs.append(np.asarray(threeD_points))
 
     return threeDs
+
+def choose_best_threeD(threeDs,P2s):
+    best_front_num=0
+    best_idx=-1
+    for i in range(4):
+        P2=P2s[i]
+        R=P2[:,:-1]
+        t=P2[:,-1:]
+        threeD=threeDs[i].T
+        camera_center=-R.T@t
+        front_num = np.sum((R[-1:, :]@(threeD - camera_center)) > 0)
+        if front_num>best_front_num:
+            best_front_num=front_num
+            best_idx=i
+        print(f'# front num: {front_num}/{threeD.shape[1]}')
+
+    return threeDs[best_idx]
+

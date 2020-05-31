@@ -1,7 +1,7 @@
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
-
+from mpl_toolkits.mplot3d import Axes3D
 
 def norm_line(lines):
     a = lines[0,:]
@@ -44,3 +44,14 @@ def draw_epilines(gray1, gray2, inlier1, inlier2, F, filename):
     plt.subplot(223), plt.imshow(img4)
     plt.subplot(224), plt.imshow(img3)
     plt.savefig(filename)
+
+def plot(final3d):
+    fig = plt.figure()
+    ax = Axes3D(fig)
+    for i in range(len(final3d)):
+        ax.scatter(final3d[i,0], final3d[i,1], final3d[i,2])
+    ax.set_xlabel('x axis')
+    ax.set_ylabel('y axis')
+    ax.set_zlabel('z axis')
+    ax.view_init(elev = 135, azim = 90)
+    plt.show()
