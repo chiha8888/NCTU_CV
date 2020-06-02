@@ -3,6 +3,7 @@ function obj_main(P,p_img2,M,tex_name,im_index)
 
 img = imread(tex_name);
 img_size = size(img);
+im_index=1;
 
 %----------------------------------------------------
 % mesh-triangulation
