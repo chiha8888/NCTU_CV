@@ -9,19 +9,22 @@ import matlab.engine
 import matlab
 
 
-img1_path=os.path.join('dataset','Mesona1.JPG') #Statue1.bmp
-img2_path=os.path.join('dataset','Mesona2.JPG') #Statue2.bmp
+img1_path=os.path.join('dataset','Statue1.bmp') #Mesona1.JPG  bomb1.png
+img2_path=os.path.join('dataset','Statue2.bmp') #Mesona2.JPG  bomb2.png
 ratio=0.7
 threshold=0.01
-K1=K2=np.asarray([[1421.9, 0.5, 509.2],
-                 [0,   1421.9, 380.2],
-                 [0,        0,     1]])
-# K1=np.array([[5426.566895, 0.678017, 330.096680],
-#              [0.000000, 5423.133301, 648.950012],
-#              [0.000000,    0.000000,   1.000000]])
-# K2=np.array([[5426.566895, 0.678017, 387.430023],
-#              [0.000000, 5423.133301, 620.616699],
-#              [0.000000,    0.000000,   1.000000]])
+# K1=K2=np.asarray([[1421.9, 0.5, 509.2],
+#                  [0,   1421.9, 380.2],
+#                  [0,        0,     1]])
+K1=np.array([[5426.566895, 0.678017, 330.096680],
+             [0.000000, 5423.133301, 648.950012],
+             [0.000000,    0.000000,   1.000000]])
+K2=np.array([[5426.566895, 0.678017, 387.430023],
+             [0.000000, 5423.133301, 620.616699],
+             [0.000000,    0.000000,   1.000000]])
+# K1=K2=np.array([[200,0,0],
+#                 [0,200,0],
+#                 [0, 0, 1]])
 
 def ndarray2matlab(x):
     return matlab.double(x.tolist())
