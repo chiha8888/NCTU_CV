@@ -29,16 +29,16 @@ def compute_fundamental_matrix(x,x_):
     A = np.zeros((8,9))
     for i in range(8):
         A[i]=[ x_[0, i]*x[0, i], x_[0, i]*x[1, i], x_[0, i], x_[1, i]*x[0, i], x_[1, i]*x[1, i], x_[1, i], x[0, i], x[1, i], 1 ]
-
+    
     # A@f=0
     U, S, V = np.linalg.svd(A)
-    F = V[-1,:].reshape(3, 3)
+    F = V[-1].reshape(3, 3)
 
     # det(F)=0 constrain
     U, S, V = np.linalg.svd(F)
     S[-1] = 0
     F = U @ np.diag(S) @ V
-    return F / F[-1,-1]
+    return F
 
 def compute_fundamental_matrix_normalized(p1,p2):
     """
@@ -52,7 +52,7 @@ def compute_fundamental_matrix_normalized(p1,p2):
     F = compute_fundamental_matrix(p1_normalized,p2_normalized)
 
     F = T2.T @ F @ T1
-    return F / F[2, 2]
+    return F/F[-1,-1]
 
 def get_fundamental_matrix(keypoints1,keypoints2,threshold):
     """
@@ -60,6 +60,7 @@ def get_fundamental_matrix(keypoints1,keypoints2,threshold):
     :param keypoints2: (N,2) ndarray
     :param threshold: |x'Fx| < threshold as inliers
     """
+    rs = np.random.RandomState(seed = 0)
     N=len(keypoints1)
     keypoints1=np.hstack((keypoints1,np.ones((N,1))))
     keypoints2=np.hstack((keypoints2,np.ones((N,1))))
@@ -69,7 +70,7 @@ def get_fundamental_matrix(keypoints1,keypoints2,threshold):
     best_inlier_idxs=None
     # find best F with RANSAC
     for _ in range(2000):
-        choose_idx=np.random.choice(N, 8, replace=False)  # sample 8 correspondence feature points
+        choose_idx=rs.choice(N, 8, replace=False)  # sample 8 correspondence feature points
         # get F
         F=compute_fundamental_matrix_normalized(keypoints1[choose_idx,:],keypoints2[choose_idx,:])
 

@@ -21,51 +21,55 @@ def compute_P_from_essential(E):
 
     return P2s
 
-def threeD_from_camera_matrix(K1,K2,P1,P2s,inlier1,inlier2):
+def skew_sym_mat(x):
+    return np.array([
+        [0, -x[2], x[1]],
+        [x[2], 0, -x[0]],
+        [-x[1], x[0], 0]
+    ])
+
+def best_P2(P1,P2s,pt1,pt2):
     """
-    :param K1: Intrinsic matrix form camera1
-    :param K2: Intrinsic matrix from camera2
     :param P1: Extrinsic matrix from camera1
     :param P2s: Extrinsic matrixs from camera2
-    :param inlier1: (N,2) ndarray
-    :param inlier2: (N,2) ndarray
+    :param pt1: (3,N) ndarray
+    :param pt2: (3,N) ndarray
     :return: [(N,3) ndarray, (N,3) ndarray, (N,3) ndarray, (N,3) ndarray]
     """
-    N=len(inlier1)
-    threeDs=[]
-    for i in range(4):
-        P2=P2s[i]
-        CM1=K1@P1
-        CM2=K2@P2
+    index = -1
+    for i, P2 in enumerate(P2s):
+        # (pt1 x P1) * X = 0
+        # (pt2 x P2) * X = 0
+        A = np.vstack((skew_sym_mat(pt1[:, 0]) @ P1,
+                       skew_sym_mat(pt2[:, 0]) @ P2))
+        U, S, V = np.linalg.svd(A)
+        P = np.ravel(V[-1, :4])
+        v1 = P / P[3]  # X solution
 
-        threeD_points=[]
-        for i in range(N):
-            u,v=inlier1[i]
-            u_,v_=inlier2[i]
-            A = np.asarray([u*CM1[2,:]-CM1[0,:],
-                            v*CM1[2,:]-CM1[1,:],
-                            u_*CM2[2,:]-CM2[0,:],
-                            v_*CM2[2,:]-CM2[1,:]])
-            U,S,V=np.linalg.svd(A)
-            threeD_points.append(V[-1,:-1]/V[-1,-1])
-        threeDs.append(np.asarray(threeD_points))
+        P2_h = np.linalg.inv(np.vstack([P2, [0, 0, 0, 1]]))
+        v2 = np.dot(P2_h[:3, :4], v1)
 
-    return threeDs
+        if v1[2] > 0 and v2[2] > 0:
+            index = i
 
-def choose_best_threeD(threeDs,P2s):
-    best_front_num=0
-    best_idx=-1
-    for i in range(4):
-        P2=P2s[i]
-        R=P2[:,:-1]
-        t=P2[:,-1:]
-        threeD=threeDs[i].T
-        camera_center=-R.T@t
-        front_num = np.sum((R[-1:, :]@(threeD - camera_center)) > 0)
-        if front_num>best_front_num:
-            best_front_num=front_num
-            best_idx=i
-        print(f'# front num: {front_num}/{threeD.shape[1]}')
+    return P2s[index]
 
-    return threeDs[best_idx]
+def choose_best_threeD(h1,h2,P1,P2):
+    P2 = np.linalg.inv(np.vstack([P2, [0, 0, 0, 1]]))[:3, :4]
+
+    n_point = h1.shape[1]
+    res = np.ones((n_point, 3))
+
+    for i in range(n_point):
+        A = np.asarray([
+            (h1[0, i] * P1[2, :] - P1[0, :]),
+            (h1[1, i] * P1[2, :] - P1[1, :]),
+            (h2[0, i] * P2[2, :] - P2[0, :]),
+            (h2[1, i] * P2[2, :] - P2[1, :])
+        ])
+
+        U,S,V = np.linalg.svd(A)
+        res[i, :] = V[-1,:-1]/ V[-1,-1]
+
+    return res
 
