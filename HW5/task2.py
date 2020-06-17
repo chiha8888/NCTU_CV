@@ -4,7 +4,7 @@ import numpy as np
 import collections
 from scipy.spatial.distance import cdist
 
-def loadImgs(filepath,size):
+def loadImgs(filepath):
     img_list=[]
 
     class_names=os.listdir(filepath)
@@ -16,7 +16,6 @@ def loadImgs(filepath,size):
                 img_path = os.path.join(class_path,image_name)
                 img = cv2.imread(img_path)
                 img=cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-                # img=cv2.resize(img,size)
                 img_list.append(img)
             except:
                 pass
@@ -26,16 +25,18 @@ def loadImgs(filepath,size):
 def get_all_features(img_list):
     """
     :param imgs: a list of images
-    :return: (#keypoints from all images,128) ndarray
+    :return: (#keypoints) ndarray, (#keypoints from all images,128) ndarray
     """
     sift = cv2.xfeatures2d.SIFT_create()
+    keypoints=None
     describes=None
     for img in img_list:
         kp,des=sift.detectAndCompute(img,None)
         if des is not None:
             describes=np.vstack((describes,des)) if describes is not None else des
-
-    return describes
+        if kp is not None:
+            keypoints=np.append(keypoints,kp) if keypoints is not None else kp
+    return keypoints,describes
 
 def img2histogram(img,centers):
     """represent img by frequencies of visual words
@@ -78,18 +79,35 @@ def knn(indices):
 
 train_path=os.path.join('hw5_data','train')
 test_path=os.path.join('hw5_data','test')
-size=(200,200)
-cluster=80
-k=5
+category=list(os.listdir(train_path))
+cluster=100
+k=7
 
 if __name__=='__main__':
     # load images
-    train_imgs=loadImgs(train_path,size=size)
-    test_imgs=loadImgs(test_path,size=size)
+    train_imgs=loadImgs(train_path)
+    test_imgs=loadImgs(test_path)
+
+    cats_dict = {c: dict.fromkeys(['kp', 'des']) for c in category}
+    min_features=1000000000
+    for i,c in enumerate(category):
+        keypoints,describes=get_all_features(train_imgs[i*100:i*100+100])
+        cats_dict[c]['kp']=keypoints
+        cats_dict[c]['des']=describes
+        if len(keypoints)<min_features:
+            min_features=len(keypoints)
+
+    print(f'minimum features among categories: {min_features}')
+
+    n_descriptors=int(0.8*min_features)
+    all_features=None
+    for c in category:
+        responses=np.asarray([keypoint.response for keypoint in cats_dict[c]['kp']])
+        kp_idx=np.argsort(responses)[-n_descriptors:]
+        all_features=np.vstack((all_features,cats_dict[c]['des'][kp_idx])) if all_features is not None else cats_dict[c]['des'][kp_idx]
+
+
     # k-means
-    all_features=get_all_features(train_imgs)
-
-
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
     _,_,centers = cv2.kmeans(all_features,cluster,None,criteria,10,cv2.KMEANS_PP_CENTERS)
 
@@ -101,5 +119,5 @@ if __name__=='__main__':
     indices=np.argsort(cdist(test_histograms,train_histograms,'euclidean'),axis=1)
 
     acc=knn(indices[:,:k])
-    print(acc)
+    print(f'acc: {acc:.2f}')
 
