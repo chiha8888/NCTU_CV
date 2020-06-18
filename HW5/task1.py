@@ -43,4 +43,4 @@ if __name__=='__main__':
         if gt == predict:
             acc += 1
 
-    print(f'acc: {acc/len(test_features):.2f}')
+    print(f'acc: {acc/len(test_features)*100:.2f}%')
