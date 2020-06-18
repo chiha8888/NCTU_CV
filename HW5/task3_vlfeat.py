@@ -4,6 +4,7 @@ import numpy as np
 import collections
 from scipy.spatial.distance import cdist
 import cyvlfeat as vlfeat  # https://github.com/menpo/cyvlfeat/blob/master/cyvlfeat/sift/dsift.py
+from libsvm.svmutil import svm_train,svm_predict
 
 
 def loadImgs(filepath):
@@ -33,7 +34,7 @@ def get_all_features(img_list):
     describes=None
     for img in img_list:
         kp,des=vlfeat.sift.dsift(img,step=8,fast=True,float_descriptors=True)
-        des=des[:int(len(des)*0.01)]  # randomly choose features from lots of features
+        des=des[:int(len(des)*0.2)]  # randomly choose features from lots of features
         describes=np.vstack((describes,des)) if describes is not None else des
 
     return describes
@@ -82,12 +83,10 @@ def knn(indices):
 
     return acc/len(indices)
 
-
 train_path=os.path.join('hw5_data','train')
 test_path=os.path.join('hw5_data','test')
 category=list(os.listdir(train_path))
 vocabulary_size=100
-k=7
 
 
 if __name__=='__main__':
@@ -109,8 +108,14 @@ if __name__=='__main__':
     train_histograms=get_histograms(train_imgs,vocabulary_size,centers)
     test_histograms=get_histograms(test_imgs,vocabulary_size,centers)
 
-    # knn
-    indices=np.argsort(cdist(test_histograms,train_histograms,'euclidean'),axis=1)
-    acc=knn(indices[:,:k])
-    print(f'vocabulary_size:{vocabulary_size}')
-    print(f'acc: {acc*100:.2f}%')
+    # svm
+    y_train=np.zeros((len(train_imgs)))
+    y_test=np.zeros((len(test_imgs)))
+    for i in range(len(category)):
+        y_train[i*100:i*100+100]=i
+        y_test[i*10:i*10+10]=i
+    model = svm_train(y_train, train_histograms, '-q -t 0')
+    p_label, p_acc, p_vals = svm_predict(y_test, test_histograms, model, '-q')
+    print(f'acc: {p_acc[0]:.2f}%')
+
+
